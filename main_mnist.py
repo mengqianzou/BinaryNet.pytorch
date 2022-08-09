@@ -1,14 +1,11 @@
-
 from __future__ import print_function
 import argparse
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
-from models.binarized_modules import  BinarizeLinear,BinarizeConv2d
-from models.binarized_modules import  Binarize,HingeLoss
+from models.binarized_modules import  BinarizeLinear
 import matplotlib.pyplot as plt
 
 # Training settings
@@ -17,7 +14,7 @@ parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 256)')
 parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                     help='input batch size for testing (default: 1000)')
-parser.add_argument('--epochs', type=int, default=1, metavar='N',
+parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.001)')
@@ -59,10 +56,10 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.infl_ratio=1
-        self.fc1 = BinarizeLinear(784, 16*self.infl_ratio)
+        self.fc1 = BinarizeLinear(784, 16*self.infl_ratio,bias=False)
         self.htanh1 = nn.Hardtanh()
         self.bn1 = nn.BatchNorm1d(16*self.infl_ratio)
-        self.fc2 = nn.Linear(16*self.infl_ratio, 10)
+        self.fc2 = nn.Linear(16*self.infl_ratio, 10,bias=False)
         self.logsoftmax=nn.LogSoftmax()
         self.drop=nn.Dropout(0.5)
 
@@ -73,36 +70,6 @@ class Net(nn.Module):
         x = self.htanh1(x)
         x = self.fc2(x)
         return self.logsoftmax(x)
-    # def __init__(self):
-    #     super(Net, self).__init__()
-    #     self.infl_ratio=3
-    #     self.fc1 = BinarizeLinear(784, 2048*self.infl_ratio)
-    #     self.htanh1 = nn.Hardtanh()
-    #     self.bn1 = nn.BatchNorm1d(2048*self.infl_ratio)
-    #     self.fc2 = BinarizeLinear(2048*self.infl_ratio, 2048*self.infl_ratio)
-    #     self.htanh2 = nn.Hardtanh()
-    #     self.bn2 = nn.BatchNorm1d(2048*self.infl_ratio)
-    #     self.fc3 = BinarizeLinear(2048*self.infl_ratio, 2048*self.infl_ratio)
-    #     self.htanh3 = nn.Hardtanh()
-    #     self.bn3 = nn.BatchNorm1d(2048*self.infl_ratio)
-    #     self.fc4 = nn.Linear(2048*self.infl_ratio, 10)
-    #     self.logsoftmax=nn.LogSoftmax()
-    #     self.drop=nn.Dropout(0.5)
-
-    # def forward(self, x):
-    #     x = x.view(-1, 28*28)
-    #     x = self.fc1(x)
-    #     x = self.bn1(x)
-    #     x = self.htanh1(x)
-    #     x = self.fc2(x)
-    #     x = self.bn2(x)
-    #     x = self.htanh2(x)
-    #     x = self.fc3(x)
-    #     x = self.drop(x)
-    #     x = self.bn3(x)
-    #     x = self.htanh3(x)
-    #     x = self.fc4(x)
-    #     return self.logsoftmax(x)
 
 model = Net()
 if args.cuda:
@@ -140,7 +107,7 @@ def train(epoch):
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                100. * batch_idx / len(train_loader), loss.item(),))
 
 def test():
     model.eval()
@@ -168,8 +135,9 @@ for epoch in range(1, args.epochs + 1):
     test()
     if epoch%40==0:
         optimizer.param_groups[0]['lr']=optimizer.param_groups[0]['lr']*0.1
-torch.save(model.state_dict(),'F:\AIR\SRAM-CIM\BNNSRAM\BinaryNet.pytorch\model_mnist')
+torch.save(model.state_dict(),'model_mnist/mnist.pt')
 plt.plot(range(1,args.epochs+1),acc_list)
-plt.title('Accuracy')
+plt.title('Validation Accuracy')
+# plt.ylim([60,100])
+plt.savefig('BNN_MNIST.jpg',dpi=600)
 plt.show()
-plt.savefig('BNN_MNIST_model.jpg',dpi=600)
