@@ -36,11 +36,11 @@ def setup_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 # 设置随机数种子
-setup_seed(20)
+# setup_seed(20)
 
 
 #路径是自己电脑里所对应的路径
-datapath = r'F:\AIR\BNNCIS\SpiceSim\MyTrainData'
+datapath = r'F:\AIR\BNNCIS\BinaryNet.pytorch\MyTrainData'
 trainpath = r'TrainData.txt'
 testpath = r'TestData.txt'
 
@@ -66,12 +66,12 @@ class MyDataset(Dataset):
         pic = transforms.ToTensor()(pic)
         return pic,label
 
-#实例化对象
-train_data = MyDataset(trainpath)
-test_data = MyDataset(testpath)
-#将数据集导入DataLoader，进行shuffle以及选取batch_size
-train_loader = DataLoader(train_data,batch_size=70,shuffle=True,num_workers=0)
-test_loader = DataLoader(test_data,batch_size=70,shuffle=True,num_workers=0)
+#
+# train_data = MyDataset(trainpath)
+# test_data = MyDataset(testpath)
+# #将数据集导入DataLoader，进行shuffle以及选取batch_size
+# train_loader = DataLoader(train_data,batch_size=70,shuffle=True,num_workers=0)
+# test_loader = DataLoader(test_data,batch_size=70,shuffle=True,num_workers=0)
 row = 10; column = 10                   # size of the input image
 num_channel = 8                         # channel number: 8
 outsize = 2                             # size of the final output: 2 classes, trigger or not
@@ -81,7 +81,7 @@ class Net(nn.Module):
         self.fc1 = BinarizeLinear(row*column, num_channel,bias=False)
         self.htanh1 = nn.Hardtanh()
         # self.bn1 = nn.BatchNorm1d(num_channel)
-        self.fc2 = BinarizeLinear(num_channel, outsize,bias=False,act=True)
+        self.fc2 = BinarizeLinear(num_channel, outsize,bias=False)
         self.logsoftmax=nn.LogSoftmax()
 
     def forward(self, x):
@@ -93,77 +93,83 @@ class Net(nn.Module):
         # return self.logsoftmax(x)
         return x
 
-model = Net()
-lr = 0.01 ; epochs = 30
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=lr)
-acc_list = []       # 用于画 Accuracy-Epoch图
-
-def train(epoch):
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        target = torch.as_tensor(tuple(map(int,target)))    # 将target转为tensor类型
-        data, target = Variable(torch.as_tensor(data)), Variable(target)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = criterion(output, target)
-
-        if epoch%40==0:
-            optimizer.param_groups[0]['lr']=optimizer.param_groups[0]['lr']*0.1
-
-        optimizer.zero_grad()
-        loss.backward()
-        for p in list(model.parameters()):
-            if hasattr(p,'org'):
-                p.data.copy_(p.org)
-        optimizer.step()
-        for p in list(model.parameters()):
-            if hasattr(p,'org'):
-                p.org.copy_(p.data.clamp_(-1,1))
-
-        # if batch_idx % 10 == 0:
-        #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-        #         epoch, (batch_idx+1) * len(data), len(train_loader.dataset),
-        #                100. * (batch_idx+1) / len(train_loader), loss.item(),))
-        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-            epoch, (batch_idx+1) * len(data), len(train_loader.dataset),
-                    100. * (batch_idx+1) / len(train_loader), loss.item(),))
-
-def test():
-    model.eval()
-    test_loss = 0
-    correct = 0
-    with torch.no_grad():
-        for data, target in test_loader:
-            target = torch.as_tensor(tuple(map(int,target)))
-            data, target = Variable(torch.as_tensor(data)), Variable(target)
-            output = model(data)
-            test_loss += criterion(output, target).item() # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-            correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
-    acc_list.append(100. * correct / len(test_loader.dataset))
-
-for epoch in range(1, epochs + 1):
-    train(epoch)
-    # test()
-    if epoch%40==0:
-        optimizer.param_groups[0]['lr']=optimizer.param_groups[0]['lr']*0.1
-torch.save(model.state_dict(),'Pattern.pt')
-test()
+# model = Net()
+# lr = 0.01 ; epochs = 30
+# criterion = nn.CrossEntropyLoss()
+# optimizer = optim.Adam(model.parameters(), lr=lr)
+# acc_list = []       # 用于画 Accuracy-Epoch图
+#
+# def train(epoch):
+#     model.train()
+#     for batch_idx, (data, target) in enumerate(train_loader):
+#         target = torch.as_tensor(tuple(map(int,target)))    # 将target转为tensor类型
+#         data, target = Variable(torch.as_tensor(data)), Variable(target)
+#         optimizer.zero_grad()
+#         output = model(data)
+#         loss = criterion(output, target)
+#         # if epoch%40==0:
+#         #     optimizer.param_groups[0]['lr']=optimizer.param_groups[0]['lr']*0.1
+#         optimizer.zero_grad()
+#         loss.backward()
+#         for p in list(model.parameters()):
+#             if hasattr(p,'org'):
+#                 p.data.copy_(p.org)
+#         optimizer.step()
+#         for p in list(model.parameters()):
+#             if hasattr(p,'org'):
+#                 p.org.copy_(p.data.clamp_(-1,1))
+#
+#         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+#             epoch, (batch_idx+1) * len(data), len(train_loader.dataset),
+#                     100. * (batch_idx+1) / len(train_loader), loss.item(),))
+#
+# def test():
+#     model.eval()
+#     test_loss = 0
+#     correct = 0
+#     with torch.no_grad():
+#         for data, target in test_loader:
+#             target = torch.as_tensor(tuple(map(int,target)))
+#             data, target = Variable(torch.as_tensor(data)), Variable(target)
+#             output = model(data)    # 返回的是属于每一类的概率（几乎，因为相加不为1）
+#             test_loss += criterion(output, target).item() # sum up batch loss
+#             pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
+#             correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+#
+#     test_loss /= len(test_loader.dataset)
+#     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+#         test_loss, correct, len(test_loader.dataset),
+#         100. * correct / len(test_loader.dataset)))
+#     acc_list.append(100. * correct / len(test_loader.dataset))
+#
+# for epoch in range(1, epochs + 1):
+#     train(epoch)
+#     # test()
+#     if epoch%40==0:
+#         optimizer.param_groups[0]['lr']=optimizer.param_groups[0]['lr']*0.1
+# torch.save(model.state_dict(),'Pattern.pt')
+# test()
 # plt.plot(range(1,epochs+1),acc_list)
 # plt.title('Validation Accuracy')
 # plt.show()
 
-################ 手动推理
-# mymodel = torch.load('Pattern.pt')
-# f1_weight = Binarize(mymodel['fc1.weight'])
-# f2_weight = Binarize(mymodel['fc  2.weight'])
-# for data, target in test_loader:
-#     target = torch.as_tensor(tuple(map(int,target)))
-#     out1 = torch
+# ################ 手动推理
+mymodel = torch.load('correctPattern.pt')
+f1_weight = Binarize(mymodel['fc1.weight'])
+f2_weight = Binarize(mymodel['fc2.weight'])
+train_data = MyDataset(trainpath)
+test_data = MyDataset(testpath)
+#将数据集导入DataLoader，进行shuffle以及选取batch_size
+test_loader = DataLoader(test_data,batch_size=150,shuffle=True,num_workers=0)
+correct = 0
+for data, tar in test_loader:
+    data = data.reshape([150,100])
+    tar = torch.as_tensor(tuple(map(int,tar)))
+    out1 = torch.matmul(data,f1_weight.transpose(0,1))
+    out2 = torch.matmul(out1,f2_weight.transpose(0,1))
+    out = out2.max(1, keepdim=True)[1]
+for i in range(out.shape[0]):
+    if out[i]== tar[i]:
+        correct += 1
+print(correct,'/',out.shape[0])
 
